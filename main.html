@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predicting Atmospheric Emissions in London - ML Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            colour: #333;
+        }
+
+        .presentation-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: centre;
+            align-items: centre;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            z-index: 2;
+        }
+
+        .slide.prev {
+            transform: translateX(-100%);
+        }
+
+        .slide-content {
+            max-width: 1500px;
+            width: 100%;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: centre;
+            text-align: centre;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.8s ease-out;
+            overflow: hidden;
+        }
+
+        .slide-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .slide-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .slide-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide h1 {
+            font-size: 2.4rem;
+            colour: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3498db, #9b59b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-colour: transparent;
+            background-clip: text;
+        }
+
+        .slide h2 {
+            font-size: 1.9rem;
+            colour: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .slide h3 {
+            font-size: 1.4rem;
+            colour: #34495e;
+            margin-bottom: 12px;
+        }
+
+        .slide p {
+            font-size: 1rem;
+            colour: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        .authors {
+            font-size: 1.1rem;
+            colour: #7f8c8d;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+            width: 100%;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            colour: white;
+            padding: 20px 15px;
+            border-radius: 15px;
+            text-align: centre;
+            box-shadow: 0 10px 25px rgba(116, 185, 255, 0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        .metric-value {
+            font-size: 1.9rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 12px 0;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+
+        .chart-container.large {
+            height: 320px;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+            width: 100%;
+        }
+
+        .insight-card {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            colour: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(253, 121, 168, 0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .insight-card h4 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .insight-card p {
+            opacity: 0.95;
+            line-height: 1.4;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+
+        .cluster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+            width: 100%;
+        }
+
+        .cluster-card {
+            padding: 20px 15px;
+            border-radius: 15px;
+            text-align: centre;
+            colour: white;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .cluster-card:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        .cluster-high {
+            background: linear-gradient(135deg, #e17055, #d63031);
+        }
+
+        .cluster-medium {
+            background: linear-gradient(135deg, #fdcb6e, #e17055);
+        }
+
+        .cluster-low {
+            background: linear-gradient(135deg, #00b894, #00a085);
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            font-size: 0.85rem;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #2d3436, #636e72);
+            colour: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, #00b894, #00a085);
+            colour: white;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .feature-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            font-size: 0.8rem;
+        }
+
+        .feature-table th,
+        .feature-table td {
+            padding: 8px;
+            text-align: centre;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-table th {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            colour: white;
+            font-weight: 600;
+        }
+
+        .feature-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        /* Navigation Controls */
+        .nav-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 15px;
+            align-items: centre;
+        }
+
+        .nav-btn {
+            background: rgba(52, 152, 219, 0.9);
+            colour: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-btn:hover {
+            background: rgba(52, 152, 219, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .slide-indicators {
+            display: flex;
+            gap: 8px;
+        }
+
+        .indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .indicator.active {
+            background: #3498db;
+            transform: scale(1.2);
+        }
+
+        .slide-number {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            colour: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            z-index: 1000;
+            font-size: 0.9rem;
+        }
+
+        /* Title slide specific styles */
+        .title-slide .slide-content {
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(240,248,255,0.95));
+            justify-content: centre;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            colour: #7f8c8d;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .university {
+            font-size: 1.2rem;
+            colour: #34495e;
+            font-weight: 600;
+            margin: 20px 0 15px 0;
+        }
+
+        .data-summary {
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            colour: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 12px 0;
+            text-align: centre;
+        }
+
+        .data-summary h4 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .data-summary p {
+            font-size: 0.95rem;
+            opacity: 0.95;
+        }
+
+        .references-list {
+            text-align: left;
+            font-size: 0.75rem;
+            line-height: 1.3;
+            colour: #555;
+            height: 65vh;
+            overflow-y: auto;
+            columns: 2;
+            column-gap: 30px;
+        }
+
+        .references-list p {
+            margin-bottom: 10px;
+            text-align: left;
+            break-inside: avoid;
+        }
+
+        /* Result Color Coding */
+        .result-excellent {
+            background: linear-gradient(135deg, #00b894, #00a085);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .result-good {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .result-moderate {
+            background: linear-gradient(135deg, #fdcb6e, #e17055);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .result-poor {
+            background: linear-gradient(135deg, #e17055, #d63031);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .slide-content {
+                padding: 20px;
+            }
+
+            .slide h1 {
+                font-size: 2rem;
+            }
+
+            .slide h2 {
+                font-size: 1.6rem;
+            }
+
+            .metric-value {
+                font-size: 1.8rem;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            .nav-btn {
+                padding: 10px 15px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <!-- Slide Number Indicator -->
+        <div class="slide-number">
+            <span id="current-slide">1</span> / <span id="total-slides">14</span>
+        </div>
+
+        <!-- Slide 1: Title -->
+        <div class="slide active title-slide">
+            <div class="slide-content">
+                <h1>Predicting Atmospheric Emissions in London</h1>
+                <p class="subtitle">A Machine Learning Approach Using the LAEI 2019 Dataset</p>
+                <p class="university">🎓 University of Liverpool | CSCK503 Machine Learning in Practice</p>
+                <div class="authors">
+                    👥 Dashrath Bhati • Jonathan Kingston • Joseph Magnussen<br>
+                    Kristina Hanxhara • Rafael Almeida • Thomas Mortimer
+                </div>
+                <p style="margin-top: 30px; font-size: 1.1rem; colour: #34495e;">August 2025</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Project Overview -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🎯 Project Overview</h2>
+                <p>Athana Data Science Services (ADSS) commissioned by the UK Department of Environment to develop machine learning models for predicting atmospheric emissions using the 2019 London Atmospheric Emissions Inventory (LAEI) dataset.</p>
+                
+                <div class="data-summary">
+                    <h4>📊 LAEI 2019 Dataset Specifications</h4>
+                    <p>Comprehensive emissions data across London covering NOx, NO₂, PM₁₀, PM₂.₅, CO₂, SO₂, CH₄, and VOCs reported in tonnes/year by source type including transport, heating, industry, and aviation.</p>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>📍 Spatial Coverage</h4>
+                        <p>79,388 road segments analysed across all London boroughs and areas within the M25. Emissions mapped on 1km grids with 20m geographical resolution concentration data.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🔬 ML Methodology</h4>
+                        <p>Three complementary approaches: Ridge Regression for precision, Random Forest for feature analysis, K-means for geographical pattern discovery.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Dataset Characteristics -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📊 Dataset Characteristics & Preprocessing</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">143,976</div>
+                        <div class="metric-label">Total Observations</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">79,388</div>
+                        <div class="metric-label">Road Segments</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">23</div>
+                        <div class="metric-label">Vehicle-Specific Variables</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">20m</div>
+                        <div class="metric-label">Spatial Resolution</div>
+                    </div>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>🔧 Data Preprocessing</h4>
+                        <p>StandardScaler normalisation, missing value imputation using geographical interpolation, and PCA for dimensionality reduction applied across all models.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>📈 Traffic Metrics</h4>
+                        <p>Vehicle Kilometres (VKM), Annual Average Daily Traffic (AADT), and emission splits by vehicle type including exhaust and brake wear sources.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🎯 Target Variables</h4>
+                        <p>Focus on NOx emissions prediction with comprehensive analysis of PM₁₀, PM₂.₅, and CO₂ patterns across London's transport network.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Vehicle Type Emissions -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🚗 Vehicle Type Emission Profiles</h2>
+                
+                <div class="chart-container large">
+                    <canvas id="vehicleEmissionsChart"></canvas>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>🚙 Passenger Cars Dominance</h4>
+                        <p>Passenger cars (petrol and diesel combined) represent the largest emission source, with petrol cars showing slightly higher individual contribution than diesel variants.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🚚 Commercial Vehicle Impact</h4>
+                        <p>Light Goods Vehicles (LGV) and Heavy Goods Vehicles (HGV) show significant contributions, particularly diesel variants which dominate commercial transport emissions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Ridge Regression Results -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📈 Ridge Regression: Exceptional Accuracy</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">99.99%</div>
+                        <div class="metric-label">R-squared Accuracy</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">0.472kg</div>
+                        <div class="metric-label">Mean Absolute Error/year</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">0.973kg</div>
+                        <div class="metric-label">Root Mean Squared Error/year</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">143,976</div>
+                        <div class="metric-label">Observations Analysed</div>
+                    </div>
+                </div>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Pollutant</th>
+                            <th>R-squared</th>
+                            <th>MAE (kg/year)</th>
+                            <th>RMSE (kg/year)</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>NOx</td>
+                            <td><span class="result-excellent">0.9999</span></td>
+                            <td>0.472</td>
+                            <td>0.973</td>
+                            <td><span class="result-excellent">Exceptional</span></td>
+                        </tr>
+                        <tr>
+                            <td>PM₁₀</td>
+                            <td><span class="result-excellent">0.9999</span></td>
+                            <td>0.114</td>
+                            <td>0.178</td>
+                            <td><span class="result-excellent">Exceptional</span></td>
+                        </tr>
+                        <tr>
+                            <td>PM₂.₅</td>
+                            <td><span class="result-excellent">0.9999</span></td>
+                            <td>0.570</td>
+                            <td>7.917</td>
+                            <td><span class="result-excellent">Exceptional</span></td>
+                        </tr>
+                        <tr>
+                            <td>CO₂</td>
+                            <td><span class="result-good">0.7311</span></td>
+                            <td>2,768</td>
+                            <td>0.88</td>
+                            <td><span class="result-good">Good</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>RidgeCV with 5-fold cross-validation, StandardScaler preprocessing achieved perfect linear relationship identification for particulate emissions.</p>
+            </div>
+        </div>
+
+        <!-- Slide 6: Ridge Regression Feature Analysis -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🔍 Ridge Regression: Feature Coefficients Analysis</h2>
+                
+                <table class="feature-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Vehicle Category</th>
+                            <th>Coefficient</th>
+                            <th>Contribution %</th>
+                            <th>Impact Level</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Road-Car-Petrol</td>
+                            <td>0.155536</td>
+                            <td><span class="result-excellent">15.55%</span></td>
+                            <td>Primary emission source</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Road-Car-Diesel</td>
+                            <td>0.145751</td>
+                            <td><span class="result-excellent">14.58%</span></td>
+                            <td>Significant impact</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Road-Car-Diesel_cs</td>
+                            <td>0.092329</td>
+                            <td><span class="result-good">9.23%</span></td>
+                            <td>Cold start emissions</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Road-LGV-Diesel_cs</td>
+                            <td>0.091683</td>
+                            <td><span class="result-good">9.17%</span></td>
+                            <td>Commercial cold start</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Road-LGV-Diesel</td>
+                            <td>0.072324</td>
+                            <td><span class="result-good">7.23%</span></td>
+                            <td>Light goods vehicles</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="chart-container">
+                    <canvas id="ridgeFeatureChart"></canvas>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>🚗 Passenger Car Impact</h4>
+                        <p>Combined petrol and diesel cars account for <span class="result-poor">30.13%</span> of total NOx emissions, making them the dominant emission source.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>❄️ Cold Start Significance</h4>
+                        <p>Cold start emissions contribute <span class="result-moderate">18.40%</span> combined impact from diesel cars and LGVs, highlighting engine warm-up inefficiencies.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Random Forest Results -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🌳 Random Forest: Complex Pattern Recognition</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">97.36%</div>
+                        <div class="metric-label">Best R-squared (No Outliers)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">4.51</div>
+                        <div class="metric-label">RMSE (tonnes/year)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">50</div>
+                        <div class="metric-label">Decision Trees</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">80/20</div>
+                        <div class="metric-label">Train/Test Split</div>
+                    </div>
+                </div>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Model Variant</th>
+                            <th>R-squared</th>
+                            <th>RMSE</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Random Forest (No outliers)</td>
+                            <td><span class="result-excellent">0.9736</span></td>
+                            <td>4.5057</td>
+                            <td><span class="result-excellent">Excellent</span></td>
+                        </tr>
+                        <tr>
+                            <td>Random Forest (Original)</td>
+                            <td><span class="result-good">0.7570</span></td>
+                            <td>2724.6480</td>
+                            <td><span class="result-good">Good</span></td>
+                        </tr>
+                        <tr>
+                            <td>Random Forest (Robust Scaled)</td>
+                            <td><span class="result-good">0.7560</span></td>
+                            <td>2730.4240</td>
+                            <td><span class="result-good">Good</span></td>
+                        </tr>
+                        <tr>
+                            <td>Random Forest (Log Transform)</td>
+                            <td><span class="result-moderate">0.4235</span></td>
+                            <td>4196.6830</td>
+                            <td><span class="result-moderate">Moderate</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>Outlier removal dramatically improved model performance, demonstrating the importance of data preprocessing in Random Forest applications.</p>
+            </div>
+        </div>
+
+        <!-- Slide 8: Random Forest Feature Importance -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📊 Random Forest: Feature Importance Rankings</h2>
+                
+                <div class="chart-container large">
+                    <canvas id="forestImportanceChart"></canvas>
+                </div>
+
+                <table class="feature-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Vehicle Category</th>
+                            <th>Importance Score</th>
+                            <th>Percentage</th>
+                            <th>Classification</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Road-Car-Petrol</td>
+                            <td>0.683121</td>
+                            <td><span class="result-excellent">68.31%</span></td>
+                            <td>Dominant factor</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Road-Car-Diesel</td>
+                            <td>0.189644</td>
+                            <td><span class="result-excellent">18.96%</span></td>
+                            <td>Secondary impact</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Road-LGV-Diesel</td>
+                            <td>0.021841</td>
+                            <td><span class="result-moderate">2.18%</span></td>
+                            <td>Tertiary contributor</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Road-Car-Diesel_cs</td>
+                            <td>0.020440</td>
+                            <td><span class="result-moderate">2.04%</span></td>
+                            <td>Minor factor</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Road-HGV-Rigid</td>
+                            <td>0.020077</td>
+                            <td><span class="result-moderate">2.01%</span></td>
+                            <td>Minor factor</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>🚗 Passenger Car Dominance</h4>
+                        <p>Passenger cars represent <span class="result-poor">87.27%</span> of emission importance (68.31% + 18.96%), fundamentally different from Ridge Regression's more distributed pattern.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🚚 Commercial Vehicle Contribution</h4>
+                        <p>Light and Heavy Goods Vehicles combined account for only <span class="result-excellent">4.19%</span> of feature importance, despite their significant presence in London traffic.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Borough Rankings -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🏙️ London Borough Emission Rankings</h2>
+                
+                <div class="chart-container large">
+                    <canvas id="boroughRankingsChart"></canvas>
+                </div>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Borough</th>
+                            <th>NOx (tonnes)</th>
+                            <th>PM₁₀ (tonnes)</th>
+                            <th>PM₂.₅ (tonnes)</th>
+                            <th>CO₂ (tonnes)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Bexley</td>
+                            <td><span class="result-poor">1,973.17</span></td>
+                            <td>263.10</td>
+                            <td>126.83</td>
+                            <td><span class="result-poor">1,435,925</span></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Barnet</td>
+                            <td>1,450.55</td>
+                            <td><span class="result-poor">323.90</span></td>
+                            <td><span class="result-poor">146.78</span></td>
+                            <td>996,594</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Bromley</td>
+                            <td>1,038.36</td>
+                            <td>246.82</td>
+                            <td>131.07</td>
+                            <td>804,169</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Brent</td>
+                            <td>986.18</td>
+                            <td>270.62</td>
+                            <td>112.13</td>
+                            <td>696,662</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Barking and Dagenham</td>
+                            <td>746.35</td>
+                            <td>204.87</td>
+                            <td>89.14</td>
+                            <td>403,002</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>🥇 Bexley Leadership</h4>
+                        <p>Bexley leads in NOx and CO₂ emissions, whilst Barnet dominates PM₁₀ and PM₂.₅ emissions, suggesting different pollution source patterns across boroughs.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>📊 Source Category Analysis</h4>
+                        <p>Transport dominates NOx at <span class="result-poor">60.8%</span>, whilst Industrial & Commercial leads PM₁₀ at <span class="result-moderate">38.5%</span>, and Domestic sources contribute <span class="result-moderate">33.9%</span> of CO₂.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: K-means Clustering Results -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🗺️ K-means Clustering: Geographical Emission Patterns</h2>
+                
+                <div class="cluster-grid">
+                    <div class="cluster-card cluster-high">
+                        <h4>🔴 High Emission Cluster</h4>
+                        <div class="metric-value">43.3%</div>
+                        <div class="metric-label">34,414 road segments</div>
+                        <p style="margin-top: 15px;"><strong>31x higher</strong> emissions than baseline</p>
+                    </div>
+                    <div class="cluster-card cluster-medium">
+                        <h4>🟡 Medium Emission Cluster</h4>
+                        <div class="metric-value">46.6%</div>
+                        <div class="metric-label">37,020 road segments</div>
+                        <p style="margin-top: 15px;"><strong>4x higher</strong> emissions than baseline</p>
+                    </div>
+                    <div class="cluster-card cluster-low">
+                        <h4>🟢 Low Emission Cluster</h4>
+                        <div class="metric-value">10.0%</div>
+                        <div class="metric-label">7,954 road segments</div>
+                        <p style="margin-top: 15px;"><strong>Baseline</strong> emission levels</p>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="clusterDistributionChart"></canvas>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>📈 Traffic Volume Correlation</h4>
+                        <p>High emission cluster handles <span class="result-poor">12.5x higher</span> traffic volume and <span class="result-poor">50x higher</span> Vehicle Kilometres compared to low emission areas.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🎯 Preprocessing Pipeline</h4>
+                        <p>Log transformation (np.log1p), StandardScaler normalisation, and PCA visualisation enabled robust cluster identification across 79,388 road segments.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Model Comparison -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>⚖️ Comprehensive Model Performance Comparison</h2>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Primary Application</th>
+                            <th>R-squared</th>
+                            <th>Key Strength</th>
+                            <th>Validation Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Ridge Regression</strong></td>
+                            <td>Precise emission prediction</td>
+                            <td><span class="result-excellent">99.99%</span></td>
+                            <td>Perfect numerical precision</td>
+                            <td>5-fold cross-validation</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Random Forest</strong></td>
+                            <td>Feature importance analysis</td>
+                            <td><span class="result-excellent">97.36%</span></td>
+                            <td>Complex pattern recognition</td>
+                            <td>80/20 train-test split</td>
+                        </tr>
+                        <tr>
+                            <td><strong>K-means Clustering</strong></td>
+                            <td>Geographical pattern discovery</td>
+                            <td>N/A (unsupervised)</td>
+                            <td>Geographic clustering</td>
+                            <td>PCA visualisation</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="chart-container">
+                    <canvas id="performanceComparisonChart"></canvas>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>🎯 Complementary Strengths</h4>
+                        <p>Ridge Regression excels at numerical predictions, Random Forest reveals complex relationships, and K-means identifies geographic patterns not visible to other methods.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>⚠️ Overfitting Analysis</h4>
+                        <p>Ridge (Low risk - L2 regularisation), Random Forest (Medium risk - 50 trees), K-means (Very low - unsupervised pattern discovery).</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Key Research Findings -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>🔬 Key Research Findings</h2>
+                
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>🎯 Model Accuracy Achievement</h4>
+                        <p>Ridge Regression achieved <span class="result-excellent">99.99% accuracy</span> for NOx emission prediction with sub-kilogram annual error rates across 143,976 observations.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🚗 Passenger Car Dominance</h4>
+                        <p>Passenger cars identified as <span class="result-excellent">primary emission driver</span> with 87.27% importance in Random Forest and 30.13% coefficient weight in Ridge analysis.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>📍 Geographical Distribution Pattern</h4>
+                        <p>43.3% of London roads generate <span class="result-poor">31x higher emissions</span> than baseline, revealing clear geographic clustering with 89.9% of roads in high/medium clusters.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>⛽ Fuel Type Significance</h4>
+                        <p>Diesel vehicles show <span class="result-moderate">consistently higher coefficients</span> across vehicle categories, with cold start effects contributing 18.40% combined impact.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🔧 Method Complementarity</h4>
+                        <p>Three ML approaches provide <span class="result-excellent">different insights</span>: Ridge for precision (100% R²), Random Forest for relationships (97.36% R²), K-means for geography.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🏙️ Borough Variation</h4>
+                        <p>Significant variation across boroughs with <span class="result-good">Bexley leading NOx</span> (1,973 tonnes) and <span class="result-good">Barnet leading PM₁₀</span> (324 tonnes) emissions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Conclusion -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>🎯 Research Conclusions</h1>
+                <h3>Machine Learning Successfully Models London's Emission Patterns</h3>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">99.99%</div>
+                        <div class="metric-label">Prediction Accuracy Achieved</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">3</div>
+                        <div class="metric-label">Validated ML Approaches</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">143K</div>
+                        <div class="metric-label">Observations Analysed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">87.27%</div>
+                        <div class="metric-label">Passenger Car Impact</div>
+                    </div>
+                </div>
+
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h4>📈 Technical Achievement</h4>
+                        <p>Ridge Regression demonstrates <span class="result-excellent">perfect linear relationships</span> between vehicle fleet composition and emissions with exceptional sub-kilogram accuracy.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🎯 Primary Emission Source</h4>
+                        <p>Random Forest reveals <span class="result-excellent">passenger car dominance</span> at 87.27% importance, providing clear intervention targets for policymakers.</p>
+                    </div>
+                    <div class="insight-card">
+                        <h4>🗺️ Geographic Pattern Discovery</h4>
+                        <p>K-means clustering identifies <span class="result-excellent">distinct geographical zones</span> with 43.3% of roads producing 31x higher emissions, enabling targeted interventions.</p>
+                    </div>
+                </div>
+
+                <p style="font-size: 1.4rem; margin-top: 30px; colour: #2c3e50;">
+                    <strong>Research demonstrates successful application of machine learning</strong><br>
+                    <strong>for comprehensive atmospheric emission analysis and policy guidance</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 14: References -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2>📚 References</h2>
+                <div class="references-list">
+                    <p>Anowar, F. Sadaoui, S & Selim, B. (2021). Conceptual and empirical comparison of dimensionality reduction algorithms (PCA, KPCA, LDA, MDS, SVD, LLE, ISOMAP, LE, I. Computer Science Review. 40(1), pp.2 - 12.</p>
+                    
+                    <p>Dhal, P & Azad, C. (2022). A comprehensive survey on feature selection in the various fields of machine learning. Applied Intelligence. 52(1), p.4543–4581.</p>
+                    
+                    <p>Dong, g & Liu, H. (2018). Feature Engineering for Machine Learning and Data Analytics. Florida: CRC Press. pp.55 - 67.</p>
+                    
+                    <p>Ghazali, R. Nawi, N. Deris, M. Abawajy, J. Arbaiy, N. (2024). Recent Advances on Soft Computing and Data Mining. Berlin: Springer Nature. pp.4 - 9.</p>
+                    
+                    <p>Gholizadeh, G. Saadatfar, H & Hanafi, N. (2020). K-DBSCAN: An improved DBSCAN algorithm for big data. The Journal of Supercomputing. 77(1), pp.6214 - 6235.</p>
+                    
+                    <p>Inglis, A. Parnell, A & Hurley, C. (2022). Visualizing Variable Importance and Variable Interaction Effects in Machine Learning Models. Journal of Computational and Graphical Statistics. 31(3), pp.766 - 778.</p>
+                    
+                    <p>Kanevski, M. Timonin, V & Pozdnukhov, A. (2009). Machine Learning for Spatial Environmental Data: Theory, Applications and Software. Lausanne: EPFL Press. pp.1 - 30.</p>
+                    
+                    <p>Montgomery, D. Peck, E & Vining, G. (2021). Introduction to Linear Regression Analysis. 6th ed. New York City: John Wiley & Sons. pp.1 - 11.</p>
+                    
+                    <p>Myers, D. (1994). Spatial interpolation: an overview. Geoderma. 62(1 - 3), pp.17 - 28.</p>
+                    
+                    <p>Palei, S. Lenka, R. Jain, P & Saxena, S. (2025). Artificial Intelligence in e-Health Framework. AI, Classification, Wearable Devices, and Computer-Aided Diagnosis. 1(1), pp.23 - 62.</p>
+                    
+                    <p>Tabatabaei, M. Kimiaefar, R. Hajian, A & Akbari, A. (2021). Robust outlier detection in geo-spatial data based on LOLIMOT and KNN search. Earth Science Informatics. 14 (1), pp.1065 - 1072.</p>
+                    
+                    <p>Wang, Y. Khodadadzadeh, M & Zurita-Milla, R. (2023). Spatial+: A new cross-validation method to evaluate geospatial machine learning models. International Journal of Applied Earth Observation and Geoinformation. 121 (1), pp.1 - 9.</p>
+                    
+                    <p>Wena, Y. Wua, R. Zhouc, Z. Zhanga, S. Yanga, S. Wallingtond, T. Shene, W. Tanc, Q. Dengc, Y & Wua, Y. (2022). A data-driven method of traffic emissions mapping with land use random forest models. Applied Energy. 305 (1), pp.1 - 10.</p>
+                    
+                    <p>Wheeler, D. (2019). Handbook of Regional Science - Geographically Weighted Regression. Berlin: Springer. pp.1 - 27.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Controls -->
+    <div class="nav-controls">
+        <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+        
+        <div class="slide-indicators">
+            <div class="indicator active" onclick="goToSlide(0)"></div>
+            <div class="indicator" onclick="goToSlide(1)"></div>
+            <div class="indicator" onclick="goToSlide(2)"></div>
+            <div class="indicator" onclick="goToSlide(3)"></div>
+            <div class="indicator" onclick="goToSlide(4)"></div>
+            <div class="indicator" onclick="goToSlide(5)"></div>
+            <div class="indicator" onclick="goToSlide(6)"></div>
+            <div class="indicator" onclick="goToSlide(7)"></div>
+            <div class="indicator" onclick="goToSlide(8)"></div>
+            <div class="indicator" onclick="goToSlide(9)"></div>
+            <div class="indicator" onclick="goToSlide(10)"></div>
+            <div class="indicator" onclick="goToSlide(11)"></div>
+            <div class="indicator" onclick="goToSlide(12)"></div>
+            <div class="indicator" onclick="goToSlide(13)"></div>
+        </div>
+        
+        <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        const indicators = document.querySelectorAll('.indicator');
+
+        // Update slide number display
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                } else if (index < currentSlide) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            indicators.forEach((indicator, index) => {
+                indicator.classList.toggle('active', index === currentSlide);
+            });
+
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+            
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+
+            // Initialize charts when they become visible
+            setTimeout(() => {
+                initChartsForSlide(currentSlide);
+            }, 300);
+        }
+
+        function changeSlide(direction) {
+            const newSlide = currentSlide + direction;
+            if (newSlide >= 0 && newSlide < totalSlides) {
+                currentSlide = newSlide;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            if (slideIndex >= 0 && slideIndex < totalSlides) {
+                currentSlide = slideIndex;
+                updateSlide();
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                changeSlide(1);
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                changeSlide(-1);
+            }
+        });
+
+        // Chart configurations
+        Chart.defaults.font.family = "'Segoe UI', sans-serif";
+        Chart.defaults.color = '#2c3e50';
+
+        let chartsInitialized = {};
+
+        function initChartsForSlide(slideIndex) {
+            // Vehicle Emissions Chart (Slide 3)
+            if (slideIndex === 3 && !chartsInitialized.vehicleEmissions) {
+                const vehicleCtx = document.getElementById('vehicleEmissionsChart').getContext('2d');
+                new Chart(vehicleCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Car-Petrol', 'HGV-Diesel', 'LGV-Diesel', 'Bus-Diesel', 'PHV-Diesel', 'Taxi-Diesel', 'Motorcycle'],
+                        datasets: [{
+                            label: 'Total Emissions (×10⁶)',
+                            data: [4.2, 2.1, 1.3, 0.9, 0.2, 0.2, 0.1],
+                            backgroundColor: [
+                                '#3498db',
+                                '#e74c3c',
+                                '#f39c12',
+                                '#9b59b6',
+                                '#1abc9c',
+                                '#34495e',
+                                '#95a5a6'
+                            ],
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Vehicle Type Emissions Contribution (2019)',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Total Emissions (×10⁶)' }
+                            }
+                        }
+                    }
+                });
+                chartsInitialized.vehicleEmissions = true;
+            }
+
+            // Ridge Regression Chart (Slide 5)
+            if (slideIndex === 5 && !chartsInitialized.ridge) {
+                const ridgeCtx = document.getElementById('ridgeFeatureChart').getContext('2d');
+                new Chart(ridgeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Car-Petrol', 'Car-Diesel', 'Car-Diesel (CS)', 'LGV-Diesel (CS)', 'LGV-Diesel'],
+                        datasets: [{
+                            label: 'Coefficient Value (%)',
+                            data: [15.55, 14.58, 9.23, 9.17, 7.23],
+                            backgroundColor: [
+                                '#3498db',
+                                '#e74c3c',
+                                '#f39c12',
+                                '#9b59b6',
+                                '#1abc9c'
+                            ],
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Top 5 Vehicle Categories - NOx Emission Coefficients',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Contribution (%)' }
+                            }
+                        }
+                    }
+                });
+                chartsInitialized.ridge = true;
+            }
+
+            // Random Forest Chart (Slide 7)
+            if (slideIndex === 7 && !chartsInitialized.forest) {
+                const forestCtx = document.getElementById('forestImportanceChart').getContext('2d');
+                new Chart(forestCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Car-Petrol', 'Car-Diesel', 'LGV-Diesel', 'Car-Diesel (CS)', 'HGV-Rigid', 'Others'],
+                        datasets: [{
+                            data: [68.31, 18.96, 2.18, 2.04, 2.01, 6.5],
+                            backgroundColor: [
+                                '#e74c3c',
+                                '#f39c12',
+                                '#9b59b6',
+                                '#3498db',
+                                '#1abc9c',
+                                '#95a5a6'
+                            ],
+                            borderWidth: 4,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Random Forest Feature Importance Distribution',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: { position: 'right' }
+                        }
+                    }
+                });
+                chartsInitialized.forest = true;
+            }
+
+            // Borough Rankings Chart (Slide 8)
+            if (slideIndex === 8 && !chartsInitialized.borough) {
+                const boroughCtx = document.getElementById('boroughRankingsChart').getContext('2d');
+                new Chart(boroughCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Bexley', 'Barnet', 'Bromley', 'Brent', 'Barking & Dagenham'],
+                        datasets: [{
+                            label: 'NOx (tonnes)',
+                            data: [1973.17, 1450.55, 1038.36, 986.18, 746.35],
+                            backgroundColor: '#e74c3c',
+                            borderRadius: 8,
+                        }, {
+                            label: 'PM₁₀ (tonnes)',
+                            data: [263.10, 323.90, 246.82, 270.62, 204.87],
+                            backgroundColor: '#f39c12',
+                            borderRadius: 8,
+                        }, {
+                            label: 'CO₂ (tonnes ÷ 1000)',
+                            data: [1435.925, 996.594, 804.169, 696.662, 403.002],
+                            backgroundColor: '#3498db',
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Top 5 London Boroughs - Emission Rankings',
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Emissions' }
+                            }
+                        }
+                    }
+                });
+                chartsInitialized.borough = true;
+            }
+
+            // Cluster Distribution Chart (Slide 9)
+            if (slideIndex === 9 && !chartsInitialized.cluster) {
+                const clusterCtx = document.getElementById('clusterDistributionChart').getContext('2d');
+                new Chart(clusterCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['High Emission\n(34,414 roads)', 'Medium Emission\n(37,020 roads)', 'Low Emission\n(7,954 roads)'],
+                        datasets: [{
+                            label: 'Percentage of London Roads',
+                            data: [43.3, 46.6, 10.0],
+                            backgroundColor: ['#e74c3c', '#f39c12', '#27ae60'],
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'London Road Network - Emission Cluster Distribution',
+                                font: { size: 16, weight: 'bold' }
+                            },
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 50,
+                                title: { display: true, text: 'Percentage of Roads (%)' }
+                            }
+                        }
+                    }
+                });
+                chartsInitialized.cluster = true;
+            }
+
+            // Performance Comparison Chart (Slide 10)
+            if (slideIndex === 10 && !chartsInitialized.comparison) {
+                const comparisonCtx = document.getElementById('performanceComparisonChart').getContext('2d');
+                new Chart(comparisonCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Accuracy', 'Interpretability', 'Complexity', 'Generalisation', 'Precision'],
+                        datasets: [{
+                            label: 'Ridge Regression',
+                            data: [100, 85, 30, 95, 100],
+                            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                            borderColor: '#3498db',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#3498db'
+                        }, {
+                            label: 'Random Forest',
+                            data: [97, 95, 70, 85, 75],
+                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                            borderColor: '#e74c3c',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#e74c3c'
+                        }, {
+                            label: 'K-means Clustering',
+                            data: [75, 90, 50, 90, 80],
+                            backgroundColor: 'rgba(39, 174, 96, 0.2)',
+                            borderColor: '#27ae60',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#27ae60'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Model Performance Comparison (Relative Scores)',
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: { stepSize: 20 }
+                            }
+                        }
+                    }
+                });
+                chartsInitialized.comparison = true;
+            }
+        }
+
+        // Initialize the presentation
+        updateSlide();
+    </script>
+</body>
+</html>
